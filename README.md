@@ -158,9 +158,12 @@ is the healthy state and `OK` is right. Recommends `NoData` or `KeepLast`.
 
 Limits: a ratio whose numerator series only exist after the first error
 (`code=~"5.."`) also returns nothing on a healthy service, and the check
-cannot see that from the query. Add `or vector(0)` to the numerator, or
-disable the check for those rules. Rules with non-Prometheus queries are
-not checked for `OK`.
+cannot see that from the query. Give the numerator a zero fallback with the
+denominator's labels, `(sum by (route) (rate(errors[5m])) or 0 * sum by (route) (rate(total[5m]))) / sum by (route) (rate(total[5m]))`,
+or disable the check for those rules. `or vector(0)` only works for a ratio
+with no `by`: its result has no labels, so it matches no grouped denominator
+and the ratio stays empty. Rules with non-Prometheus queries are not checked
+for `OK`.
 
 ### GAL003 exec-error-state
 

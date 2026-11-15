@@ -42,4 +42,5 @@ jobs:
       - uses: ./
         with:
           path: testdata/good
-          args: --require-label team
+          # The slo-burn-rate fixtures in testdata/good carry severity but no team label.
+          args: --require-label severity
