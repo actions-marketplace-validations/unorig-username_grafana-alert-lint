@@ -1,6 +1,6 @@
 [
   {
-    "uid": "api-5xx-ratio",
+    "uid": "api-5xx-ratio", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -61,7 +61,7 @@
     "notification_settings": { "receiver": "api-oncall" }
   },
   {
-    "uid": "api-pod-memory",
+    "uid": "api-pod-memory", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -101,6 +101,7 @@
       "runbook_url": "https://runbooks.example.com/api/memory"
     },
     "labels": { "severity": "ticket", "team": "api" },
-    "isPaused": false
+    "isPaused": false,
+    "notification_settings": null
   }
 ]

@@ -38,7 +38,8 @@ grafana-alert-lint [flags] PATH...
 Paths can be files or directories. Directories are searched for `.yaml`,
 `.yml`, `.json` and `.tf` files; hidden directories such as `.git` and
 `.terraform` are skipped. Files that hold no Grafana alert rules (Prometheus
-rule files, workflows, contact points) are ignored.
+rule files, workflows, contact points, Kubernetes manifests) are ignored. A
+named file or directory with no rules at all gets a note on stderr.
 
 ```
 Flags:
@@ -69,7 +70,7 @@ From [`testdata/output/sample.yaml`](testdata/output/sample.yaml):
 
 ```console
 $ grafana-alert-lint --require-label team testdata/output/sample.yaml
-testdata/output/sample.yaml:17: warning GAL001 Checkout: 5xx ratio, all regions: ratio of rates with no traffic guard: at low traffic one failed request is a 100% error rate. Add `and sum(rate(...)) > N`, clamp_min the denominator, or combine a request-rate query in the condition.
+testdata/output/sample.yaml:17: warning GAL001 Checkout: 5xx ratio, all regions: ratio of rates with no traffic guard: at low traffic one failed request is a 100% error rate. Add `and on() sum(rate(...)) > N` or a guard grouped by the ratio's labels, clamp_min the denominator, or combine a request-rate query in the condition.
 testdata/output/sample.yaml:30: warning GAL003 Checkout: 5xx ratio, all regions: execErrState is Alerting: a datasource timeout or query error pages as an outage. Use Error or KeepLast.
 testdata/output/sample.yaml:34: info GAL007 Checkout: 5xx ratio, all regions: no runbook_url annotation: the responder has to find the runbook while paged. Link one.
 testdata/output/sample.yaml:43: error GAL006 Checkout p99 latency: histogram_quantile over sum by (service) drops the le label: Prometheus skips bucket series without le, so the query returns nothing and the alert never fires. Keep le in the grouping.
@@ -79,8 +80,9 @@ $ echo $?
 ```
 
 Text output is `path:line: severity ID rule-title: message`. Lines point at
-the field that is wrong: the `expr`, the `noDataState`, the `for`. When the
-field is missing, the line is the start of the rule.
+the field that is wrong: the `expr`, the `noDataState`, the `for`. When a
+rule field is missing, the line is the start of the rule. When a key is
+missing from `labels` or `annotations`, the line is where that map starts.
 
 The other formats:
 
@@ -122,14 +124,20 @@ Flags a division where both sides call `rate`, `irate` or `increase`, and
 any `histogram_quantile`, unless one of these guards is present:
 
 - an `and` or `unless` whose other side compares a request rate with a
-  number, e.g. `... and sum(rate(http_requests_total[5m])) > 1`;
+  number, e.g. `... and on() sum(rate(http_requests_total[5m])) > 1`;
 - `clamp_min` in the denominator;
 - a second query in the rule that the condition reads through math, reduce,
   threshold, resample or classic conditions, e.g. condition `$A > 0.05 && $B > 1`
   where `B` is a request rate.
 
-Limits: it does not judge whether the guard's threshold is sensible, or
-whether the guard measures the same service. A request rate is a `rate`,
+`and` matches on the full label set. If the ratio is grouped, say
+`sum by (route) (...)`, a guard of `and sum(rate(...)) > 1` has no labels,
+matches nothing, and the alert can never fire. Use `and on()` for one global
+guard, or group the guard by the same labels for one guard per route.
+
+Limits: it does not check that the guard's labels match the ratio's, so the
+broken guard above counts as a guard. It does not judge whether the guard's
+threshold is sensible, or whether the guard measures the same service. A request rate is a `rate`,
 `irate` or `increase` call, or a metric whose name contains `rate` (a
 recording rule such as `job:http_requests:rate5m`), so a recording rule
 named for an error rate also counts as a guard. When another query in the
@@ -193,7 +201,8 @@ change the answer.
 
 Skipped: subqueries without an explicit step (they use the global
 evaluation interval, unknown here), duration expressions, and Grafana's
-`$__interval`, `$__rate_interval` and `$__range`, which Grafana fills in.
+`$__interval`, `$__rate_interval` and `$__range` as a window or a subquery
+step, since Grafana fills them in.
 
 Limits: one scrape interval for every query. Targets scraped more slowly
 than the flag are not caught.
@@ -245,9 +254,10 @@ reducer throws away every point but the newest. An instant query returns
 that point directly.
 
 Flags a Prometheus query with `range: true` (or `instant: false` without
-`range: false`) that a `reduce` expression or classic condition reduces with
-`last`. Other reducers, such as `mean` or `max`, need the range and are not
-flagged.
+`range: false`) when every expression that reads it is a `reduce` or classic
+condition with `last`. If anything else reads it (a `mean` or `max`
+reducer, math, resample, or an expression the linter cannot read), the
+range is needed and the query is not flagged.
 
 ### GAL010 parse-error
 
@@ -258,9 +268,10 @@ from then on.
 Flags PromQL that does not parse, a `condition` that names no data entry,
 and a rule with no condition.
 
-Limits: a query that contains `|` and does not parse is assumed to be LogQL
-from a Loki datasource that did not set `model.datasource.type`, and is not
-reported.
+Limits: a query that does not parse and has a `|` outside its string
+literals is assumed to be LogQL from a Loki datasource that did not set
+`model.datasource.type`, and is not reported. A `|` inside a regex matcher
+such as `code=~"500|502"` does not count.
 
 ## Terraform
 
@@ -280,7 +291,9 @@ linter evaluates attributes statically:
   rule's data as incomplete, which turns off the checks that need every query.
 
 Locals are not resolved, modules are not followed, and `.tf.json` files are
-not read. [`testdata/terraform/unknown.tf`](testdata/terraform/unknown.tf)
+not read. Neither are rules embedded as a string inside a Kubernetes
+ConfigMap (the Grafana Helm chart's sidecar pattern): lint the source file
+the ConfigMap is built from. [`testdata/terraform/unknown.tf`](testdata/terraform/unknown.tf)
 is the test fixture for all of this.
 
 ## In CI

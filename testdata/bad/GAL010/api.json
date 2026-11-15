@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal010-syntax",
+    "uid": "gal010-syntax", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -54,7 +54,7 @@
     }
   },
   {
-    "uid": "gal010-condition",
+    "uid": "gal010-condition", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -108,7 +108,7 @@
     }
   },
   {
-    "uid": "gal010-no-condition",
+    "uid": "gal010-no-condition", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -161,7 +161,7 @@
     }
   },
   {
-    "uid": "gal010-loki",
+    "uid": "gal010-loki", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",

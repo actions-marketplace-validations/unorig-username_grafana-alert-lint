@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal007-none",
+    "uid": "gal007-none", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",
@@ -50,7 +50,7 @@
     }
   },
   {
-    "uid": "gal007-no-runbook",
+    "uid": "gal007-no-runbook", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",
@@ -103,7 +103,7 @@
     }
   },
   {
-    "uid": "gal007-empty-summary",
+    "uid": "gal007-empty-summary", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",
@@ -157,7 +157,7 @@
     }
   },
   {
-    "uid": "gal007-ok",
+    "uid": "gal007-ok", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",

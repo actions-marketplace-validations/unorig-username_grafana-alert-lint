@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal002-alerting",
+    "uid": "gal002-alerting", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -54,7 +54,7 @@
     }
   },
   {
-    "uid": "gal002-ok",
+    "uid": "gal002-ok", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -108,7 +108,7 @@
     }
   },
   {
-    "uid": "gal002-ok-filter",
+    "uid": "gal002-ok-filter", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -162,7 +162,7 @@
     }
   },
   {
-    "uid": "gal002-ok-absent",
+    "uid": "gal002-ok-absent", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -216,7 +216,7 @@
     }
   },
   {
-    "uid": "gal002-keeplast",
+    "uid": "gal002-keeplast", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",

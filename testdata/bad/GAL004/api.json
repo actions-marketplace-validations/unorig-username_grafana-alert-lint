@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal004-unset",
+    "uid": "gal004-unset", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -53,7 +53,7 @@
     }
   },
   {
-    "uid": "gal004-zero",
+    "uid": "gal004-zero", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -107,7 +107,7 @@
     }
   },
   {
-    "uid": "gal004-empty",
+    "uid": "gal004-empty", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -161,7 +161,7 @@
     }
   },
   {
-    "uid": "gal004-set",
+    "uid": "gal004-set", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",

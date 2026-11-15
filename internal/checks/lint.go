@@ -28,12 +28,12 @@ func trafficGuard(c *ruleCtx) {
 			case isRatio(n):
 				if !guardedInQuery(n, path) && !anyNode(n.(*parser.BinaryExpr).RHS, isCall("clamp_min")) {
 					msg = "ratio of rates with no traffic guard: at low traffic one failed request is a 100% error rate. " +
-						"Add `and sum(rate(...)) > N`, clamp_min the denominator, or combine a request-rate query in the condition."
+						"Add `and on() sum(rate(...)) > N` or a guard grouped by the ratio's labels, clamp_min the denominator, or combine a request-rate query in the condition."
 				}
 			case isCall("histogram_quantile")(n):
 				if !guardedInQuery(n, path) {
 					msg = "histogram_quantile with no traffic guard: with a handful of requests, one slow request sets the quantile. " +
-						"Add `and sum(rate(..._count[5m])) > N`, or combine a request-rate query in the condition."
+						"Add `and on() sum(rate(..._count[5m])) > N` or a guard grouped by the quantile's labels, or combine a request-rate query in the condition."
 				}
 			}
 			return nil
@@ -210,7 +210,7 @@ func rateWindow(c *ruleCtx) {
 			case *parser.SubqueryExpr:
 				// A subquery's samples are its steps, not scrapes. Without an
 				// explicit step it uses the global evaluation interval, unknown here.
-				if a.RangeExpr == nil && a.StepExpr == nil && a.Step > 0 && a.Range != macroRange && a.Range < 4*a.Step {
+				if a.RangeExpr == nil && a.StepExpr == nil && a.Step > 0 && a.Range != macroRange && a.Step != macroRange && a.Range < 4*a.Step {
 					c.add(Warning, p.q.Expr.Line, "%s: the %s subquery range holds fewer than 4 of its %s steps, so the result is noisy or empty. Use [%s:%s] or longer.",
 						call, dur(a.Range), dur(a.Step), dur(4*a.Step), dur(a.Step))
 				}
@@ -323,45 +323,69 @@ func rangeQuery(c *ruleCtx) {
 	for _, p := range c.prom {
 		q := p.q
 		isRange := (q.Range != nil && *q.Range) || (q.Instant != nil && !*q.Instant && q.Range == nil)
-		if !isRange || !q.RefID.Known() {
+		if !isRange || !q.RefID.Known() || c.unknownRefs() {
 			continue
 		}
-		for i := range c.Data {
-			if by := lastReducer(&c.Data[i], q.RefID.S); by != "" {
-				c.add(Info, q.Line, "query %s is a range query and %s keeps only its last value: an instant query returns that value without fetching the whole time range. Set instant: true and range: false.",
-					q.RefID.S, by)
-				break
-			}
+		if by := onlyLastReaders(c.Data, q.RefID.S); by != "" {
+			c.add(Info, q.Line, "query %s is a range query and %s keeps only its last value: an instant query returns that value without fetching the whole time range. Set instant: true and range: false.",
+				q.RefID.S, by)
 		}
 	}
 }
 
-// lastReducer returns e's refId if e reduces ref with "last".
-func lastReducer(e *rule.Query, ref string) string {
-	if !e.IsExpression() || !e.RefID.Known() {
-		return ""
+// onlyLastReaders returns the refId of the first expression that reads ref,
+// if every expression that reads it keeps only the last value. Any other
+// reader (math, resample, another reducer, or one it cannot read) needs the
+// range, and the result is "".
+func onlyLastReaders(data []rule.Query, ref string) string {
+	by := ""
+	for i := range data {
+		e := &data[i]
+		if !e.IsExpression() {
+			if !e.DatasourceUID.Known() {
+				return "" // may be an expression we cannot see
+			}
+			continue
+		}
+		refs, ok := e.Refs()
+		if !ok {
+			return ""
+		}
+		if !slices.Contains(refs, ref) {
+			continue
+		}
+		if !keepsLast(e, ref) {
+			return ""
+		}
+		if by == "" {
+			by = e.RefID.S
+		}
 	}
+	return by
+}
+
+// keepsLast reports whether e reduces ref with "last" and nothing else.
+func keepsLast(e *rule.Query, ref string) bool {
 	switch {
 	case equalFold(e.Type, "reduce"):
-		if e.Expression.Known() && strings.Trim(e.Expression.S, "${} ") == ref && e.Reducer == "last" {
-			return e.RefID.S
-		}
+		return e.Reducer == "last"
 	case equalFold(e.Type, "classic_conditions"):
 		for _, cc := range e.Classic {
-			if cc.RefID == ref && cc.Reducer == "last" {
-				return e.RefID.S
+			if cc.RefID == ref && cc.Reducer != "last" {
+				return false
 			}
 		}
+		return true
 	}
-	return ""
+	return false
 }
 
 // GAL010
 func parseError(c *ruleCtx) {
 	for _, p := range c.prom {
-		// A | outside PromQL syntax means LogQL from a Loki datasource that
-		// did not name its type.
-		if p.err != nil && !strings.Contains(p.q.Expr.S, "|") {
+		// A | outside string literals is not PromQL: it is a LogQL pipeline
+		// from a Loki datasource that did not name its type.
+		if p.err != nil && !strings.Contains(quoted.ReplaceAllString(p.q.Expr.S, ""), "|") {
 			c.add(Error, p.q.Expr.Line, "PromQL does not parse: %s", strings.ReplaceAll(p.err.Error(), "\n", "; "))
 		}
 	}
@@ -384,6 +408,9 @@ func parseError(c *ruleCtx) {
 // PromQL helpers.
 
 var errStop = errors.New("stop")
+
+// quoted matches PromQL string literals, where | is regex alternation.
+var quoted = regexp.MustCompile("\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|`[^`]*`")
 
 var (
 	macroNum = regexp.MustCompile(`\$\{?__(?:rate_interval|interval|range)_(?:ms|s)\}?`)

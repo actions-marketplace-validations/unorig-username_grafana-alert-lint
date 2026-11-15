@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal003-alerting",
+    "uid": "gal003-alerting", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",
@@ -54,7 +54,7 @@
     }
   },
   {
-    "uid": "gal003-ok",
+    "uid": "gal003-ok", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",
@@ -108,7 +108,7 @@
     }
   },
   {
-    "uid": "gal003-unset",
+    "uid": "gal003-unset", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",
@@ -161,7 +161,7 @@
     }
   },
   {
-    "uid": "gal003-error",
+    "uid": "gal003-error", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "payments",

@@ -185,14 +185,22 @@ func parseYAML(file string, src []byte) ([]Rule, error) {
 			candidates = root.Content
 		}
 		for _, n := range candidates {
-			// Grafana rules carry data[]; Prometheus rule files (alert/expr)
-			// and recording rules (record) are not ours to lint.
-			d, rec := get(n, "data"), get(n, "record")
-			if d != nil && d.Tag != unknownTag && (rec == nil || rec.Tag == unknownTag) {
+			if isAlertRule(n) {
 				rules = append(rules, fromNode(file, n))
 			}
 		}
 	}
+}
+
+// isAlertRule reports whether n looks like a Grafana alert rule: a data
+// list, a title or condition, and no recording rule definition. The API
+// sends "record": null on alert rules. Prometheus rule files (alert/expr),
+// ConfigMaps (data is a map) and other JSON with a data list are not ours.
+func isAlertRule(n *yaml.Node) bool {
+	d, rec := get(n, "data"), get(n, "record")
+	return d != nil && (d.Kind == yaml.SequenceNode || d.Kind == yaml.AliasNode) &&
+		(get(n, "title") != nil || get(n, "condition") != nil) &&
+		(rec == nil || rec.Tag == unknownTag || rec.Tag == "!!null")
 }
 
 func fromNode(file string, n *yaml.Node) Rule {

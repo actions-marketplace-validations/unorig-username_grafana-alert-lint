@@ -122,12 +122,15 @@ func load(paths []string, stderr io.Writer) ([]rule.Rule, error) {
 			rules = append(rules, r...)
 			continue
 		}
-		err = filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
+		// The trailing separator makes WalkDir follow a root that is a symlink.
+		root := strings.TrimSuffix(p, string(os.PathSeparator)) + string(os.PathSeparator)
+		found := len(rules)
+		err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
 			if d.IsDir() {
-				if path != p && strings.HasPrefix(d.Name(), ".") {
+				if path != root && strings.HasPrefix(d.Name(), ".") {
 					return filepath.SkipDir
 				}
 				return nil
@@ -147,6 +150,9 @@ func load(paths []string, stderr io.Writer) ([]rule.Rule, error) {
 		})
 		if err != nil {
 			return nil, err
+		}
+		if len(rules) == found {
+			_, _ = fmt.Fprintf(stderr, "%s: no Grafana alert rules found\n", p)
 		}
 	}
 	return rules, nil

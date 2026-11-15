@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal005-short",
+    "uid": "gal005-short", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -72,7 +72,7 @@
     }
   },
   {
-    "uid": "gal005-ok",
+    "uid": "gal005-ok", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",

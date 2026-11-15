@@ -7,7 +7,7 @@
     "severity": "warning",
     "rule": "Checkout: 5xx ratio, all regions",
     "uid": "checkout-5xx",
-    "message": "ratio of rates with no traffic guard: at low traffic one failed request is a 100% error rate. Add `and sum(rate(...)) > N`, clamp_min the denominator, or combine a request-rate query in the condition."
+    "message": "ratio of rates with no traffic guard: at low traffic one failed request is a 100% error rate. Add `and on() sum(rate(...)) > N` or a guard grouped by the ratio's labels, clamp_min the denominator, or combine a request-rate query in the condition."
   },
   {
     "file": "testdata/output/sample.yaml",

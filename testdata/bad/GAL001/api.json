@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal001-ratio",
+    "uid": "gal001-ratio", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -54,7 +54,7 @@
     }
   },
   {
-    "uid": "gal001-quantile",
+    "uid": "gal001-quantile", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -108,7 +108,7 @@
     }
   },
   {
-    "uid": "gal001-two-windows",
+    "uid": "gal001-two-windows", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -162,7 +162,7 @@
     }
   },
   {
-    "uid": "gal001-guarded-and",
+    "uid": "gal001-guarded-and", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -216,7 +216,7 @@
     }
   },
   {
-    "uid": "gal001-clamp-min",
+    "uid": "gal001-clamp-min", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -270,7 +270,7 @@
     }
   },
   {
-    "uid": "gal001-guarded-math",
+    "uid": "gal001-guarded-math", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -328,7 +328,7 @@
     }
   },
   {
-    "uid": "gal001-gauge-ratio",
+    "uid": "gal001-gauge-ratio", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",

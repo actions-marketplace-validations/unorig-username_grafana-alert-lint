@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal008-no-team",
+    "uid": "gal008-no-team", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -53,7 +53,7 @@
     }
   },
   {
-    "uid": "gal008-no-labels",
+    "uid": "gal008-no-labels", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -103,7 +103,7 @@
     }
   },
   {
-    "uid": "gal008-empty-receiver",
+    "uid": "gal008-empty-receiver", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",
@@ -160,7 +160,7 @@
     }
   },
   {
-    "uid": "gal008-ok",
+    "uid": "gal008-ok", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "api",

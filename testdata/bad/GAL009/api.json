@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal009-range-last",
+    "uid": "gal009-range-last", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -64,7 +64,7 @@
     }
   },
   {
-    "uid": "gal009-classic-last",
+    "uid": "gal009-classic-last", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -128,7 +128,7 @@
     }
   },
   {
-    "uid": "gal009-range-mean",
+    "uid": "gal009-range-mean", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -192,7 +192,7 @@
     }
   },
   {
-    "uid": "gal009-instant",
+    "uid": "gal009-instant", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",

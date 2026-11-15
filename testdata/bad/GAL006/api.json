@@ -1,6 +1,6 @@
 [
   {
-    "uid": "gal006-drops-le",
+    "uid": "gal006-drops-le", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",
@@ -86,7 +86,7 @@
     }
   },
   {
-    "uid": "gal006-ok",
+    "uid": "gal006-ok", "record": null,
     "orgID": 1,
     "folderUID": "services",
     "ruleGroup": "checkout",

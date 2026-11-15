@@ -154,6 +154,10 @@ func TestLoadSkipsOtherFiles(t *testing.T) {
 		"workflow.yml":    "on: push\njobs: {}\n",
 		"other.tf":        "resource \"grafana_folder\" \"x\" {\n  title = \"x\"\n}\n",
 		"recording.tf":    "resource \"grafana_rule_group\" \"x\" {\n  rule {\n    name = \"r\"\n    record {\n      metric = \"x\"\n      from = \"A\"\n    }\n  }\n}\n",
+		"configmap.yaml":  "apiVersion: v1\nkind: ConfigMap\nmetadata: {name: app-config}\ndata:\n  LOG_LEVEL: info\n",
+		"response.json":   `{"status": "success", "data": [{"id": 1}]}`,
+		"null-data.json":  `{"data": null}`,
+		"main.tf.json":    `{"data": {"grafana_data_source": {"x": {"name": "p"}}}}`,
 	}
 	for name, src := range tests {
 		if rules := load(t, write(t, name, src)); len(rules) != 0 {
@@ -168,6 +172,11 @@ func TestLoadShapes(t *testing.T) {
 	r := load(t, write(t, "single.json", single))
 	if len(r) != 1 || r[0].For.S != "0" || !r[0].Data[0].IsExpression() {
 		t.Errorf("single rule: %+v", r)
+	}
+	// The provisioning API writes "record": null and "notification_settings": null on every alert rule.
+	api := `[{"uid": "x", "title": "api", "condition": "A", "notification_settings": null, "record": null, "data": []}]`
+	if r := load(t, write(t, "api.json", api)); len(r) != 1 || r[0].Notification != nil {
+		t.Errorf("API rule with null record: %+v", r)
 	}
 	multi := "title: a\ndata: []\n---\ntitle: b\ndata: []\n"
 	if r := load(t, write(t, "multi.yaml", multi)); len(r) != 2 {

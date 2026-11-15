@@ -108,6 +108,8 @@ func expr(ref, typ, e string) string {
 	return fmt.Sprintf("  - {refId: %s, datasourceUid: __expr__, model: {type: %s, expression: %q, reducer: last}}\n", ref, typ, e)
 }
 
+const rangeProm = "  - {refId: A, datasourceUid: prometheus, model: {expr: 'sum(rate(http_requests_total[5m]))', instant: false, range: true}}\n"
+
 const (
 	ratio   = `sum(rate(http_requests_total{code=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))`
 	traffic = `sum(rate(http_requests_total[5m]))`
@@ -141,6 +143,18 @@ func TestCases(t *testing.T) {
 		{"no data entries", "title: t\ncondition: A\nnoDataState: NoData\nexecErrState: Error\nfor: 5m\nannotations: {summary: s, runbook_url: u}\nlabels: {team: a, severity: b}\ndata: []\n", []string{"GAL010"}},
 		{"policy instead of receiver", ruleYAML("A", prom("A", "up")) + "notification_settings: {policy: api}\n", nil},
 		{"noDataState OK with Loki", strings.Replace(ruleYAML("A", "  - {refId: A, datasourceUid: loki, model: {expr: 'count_over_time({app=\"api\"}[5m])', datasource: {type: loki}}}\n"), "noDataState: NoData", "noDataState: OK", 1), nil},
+		{"pipe in a regex matcher still reports parse errors", ruleYAML("B", prom("A", `sum(rate(http_requests_total{code=~"500|502"}[5m])`), expr("B", "threshold", "A")), []string{"GAL010"}},
+		{"LogQL pipeline is not PromQL", ruleYAML("B", prom("A", `sum(count_over_time({app="api"} |= "error" [5m])) > 0`), expr("B", "threshold", "A")), nil},
+		{"macro subquery step", ruleYAML("B", prom("A", `increase(sum(queue_depth)[1h:$__interval]) > 1000`), expr("B", "threshold", "A")), nil},
+		{"range query read by last only", ruleYAML("B", rangeProm, expr("B", "reduce", "A")), []string{"GAL009"}},
+		{"range query also read by mean", ruleYAML("D", rangeProm, expr("B", "reduce", "A"),
+			"  - {refId: C, datasourceUid: __expr__, model: {type: reduce, expression: A, reducer: mean}}\n", expr("D", "math", "$B > 2 * $C")), nil},
+		{"range query also read by math", ruleYAML("C", rangeProm, expr("B", "reduce", "A"), expr("C", "math", "$B > 1 && $A > 1")), nil},
+		{"range query read by classic last and avg", ruleYAML("B", rangeProm,
+			"  - {refId: B, datasourceUid: __expr__, model: {type: classic_conditions, conditions: [{query: {params: [A]}, reducer: {type: last}}, {query: {params: [A]}, reducer: {type: avg}}]}}\n"), nil},
+		{"range query with an unreadable expression", ruleYAML("B", rangeProm, expr("B", "reduce", "A"), expr("C", "sql", "SELECT 1")), nil},
+		{"range query with an unknown datasource entry", ruleYAML("B", rangeProm, expr("B", "reduce", "A"),
+			"  - {refId: C, datasourceUid: [x], model: {type: math, expression: $A}}\n"), nil},
 		{"noDataState lower case", strings.Replace(ruleYAML("A", prom("A", "up")), "noDataState: NoData", "noDataState: alerting", 1), []string{"GAL002"}},
 	}
 	for _, tt := range tests {

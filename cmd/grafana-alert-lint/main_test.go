@@ -91,6 +91,14 @@ func TestExitCodes(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(hidden, "rules.yaml"), bad, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	badDir, err := filepath.Abs("testdata/bad")
+	if err != nil {
+		t.Fatal(err)
+	}
+	linked := filepath.Join(t.TempDir(), "linked")
+	if err := os.Symlink(badDir, linked); err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name   string
@@ -116,6 +124,8 @@ func TestExitCodes(t *testing.T) {
 		{"named file that does not parse", []string{broken}, 2, "", "broken.yaml"},
 		{"named file without rules", []string{norules}, 0, "", "no Grafana alert rules found"},
 		{"walked file that does not parse is skipped; hidden dirs too", []string{dir}, 0, "", "skipping"},
+		{"directory without rules", []string{dir}, 0, "", "no Grafana alert rules found"},
+		{"directory behind a symlink", []string{linked}, 1, "GAL001", ""},
 	}
 	version = "0.1.0"
 	t.Cleanup(func() { version = "dev" })

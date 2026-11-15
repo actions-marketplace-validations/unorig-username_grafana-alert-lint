@@ -28,11 +28,12 @@ runs:
   steps:
     # Builds the linter from the checked-out action, so the binary always
     # matches the action version. This sets the job's Go version to the one
-    # in this repo's go.mod.
+    # in this repo's go.mod. No cache: setup-go only hashes files inside
+    # GITHUB_WORKSPACE, and the action's go.sum lives outside it.
     - uses: actions/setup-go@v7.0.0
       with:
         go-version-file: ${{ github.action_path }}/go.mod
-        cache-dependency-path: ${{ github.action_path }}/go.sum
+        cache: false
 
     - name: Install grafana-alert-lint
       shell: bash
