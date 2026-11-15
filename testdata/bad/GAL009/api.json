@@ -1,0 +1,258 @@
+[
+  {
+    "uid": "gal009-range-last",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout open orders high",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(checkout_open_orders)",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B"
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5000
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "C"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "More than 5000 checkout orders are open",
+      "runbook_url": "https://runbooks.example.com/checkout/orders"
+    }
+  },
+  {
+    "uid": "gal009-classic-last",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout open orders high classic",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(checkout_open_orders)",
+          "instant": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "classic_conditions",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5000
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "A"
+                ]
+              },
+              "reducer": {
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "More than 5000 checkout orders are open",
+      "runbook_url": "https://runbooks.example.com/checkout/orders"
+    }
+  },
+  {
+    "uid": "gal009-range-mean",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout open orders high on average",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(checkout_open_orders)",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "mean",
+          "refId": "B"
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5000
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "C"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "More than 5000 checkout orders are open on average",
+      "runbook_url": "https://runbooks.example.com/checkout/orders"
+    }
+  },
+  {
+    "uid": "gal009-instant",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout open orders high instant",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(checkout_open_orders)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B"
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5000
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "C"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "More than 5000 checkout orders are open",
+      "runbook_url": "https://runbooks.example.com/checkout/orders"
+    }
+  }
+]

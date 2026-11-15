@@ -1,0 +1,217 @@
+[
+  {
+    "uid": "gal004-unset",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout cart service saturated",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "avg(worker_busy_ratio{service=\"cart\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.9
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Cart workers are more than 90% busy",
+      "runbook_url": "https://runbooks.example.com/checkout/cart"
+    }
+  },
+  {
+    "uid": "gal004-zero",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout cart service saturated now",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "avg(worker_busy_ratio{service=\"cart\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.9
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "0s",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Cart workers are more than 90% busy",
+      "runbook_url": "https://runbooks.example.com/checkout/cart"
+    }
+  },
+  {
+    "uid": "gal004-empty",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout cart service saturated empty",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "avg(worker_busy_ratio{service=\"cart\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.9
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Cart workers are more than 90% busy",
+      "runbook_url": "https://runbooks.example.com/checkout/cart"
+    }
+  },
+  {
+    "uid": "gal004-set",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout cart service saturated with pending period",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "avg(worker_busy_ratio{service=\"cart\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.9
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "1m30s",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Cart workers are more than 90% busy",
+      "runbook_url": "https://runbooks.example.com/checkout/cart"
+    }
+  }
+]

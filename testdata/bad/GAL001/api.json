@@ -1,0 +1,384 @@
+[
+  {
+    "uid": "gal001-ratio",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout error ratio",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(rate(http_requests_total{service=\"checkout\",code=~\"5..\"}[5m])) / sum(rate(http_requests_total{service=\"checkout\"}[5m]))",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.05
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Checkout fails more than 5% of requests",
+      "runbook_url": "https://runbooks.example.com/checkout/errors"
+    }
+  },
+  {
+    "uid": "gal001-quantile",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout p99 latency",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{service=\"checkout\"}[5m])))",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.5
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Checkout p99 latency is above 500ms",
+      "runbook_url": "https://runbooks.example.com/checkout/latency"
+    }
+  },
+  {
+    "uid": "gal001-two-windows",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout error budget burn",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 3600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(rate(http_requests_total{service=\"checkout\",code=~\"5..\"}[1h])) / sum(rate(http_requests_total{service=\"checkout\"}[1h])) > 0.0144\nand\nsum(rate(http_requests_total{service=\"checkout\",code=~\"5..\"}[5m])) / sum(rate(http_requests_total{service=\"checkout\"}[5m])) > 0.0144\n",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "for": "2m",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Checkout is burning its error budget 14.4 times too fast",
+      "runbook_url": "https://runbooks.example.com/checkout/slo"
+    }
+  },
+  {
+    "uid": "gal001-guarded-and",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout error ratio with guard",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "(\n  sum(rate(http_requests_total{service=\"checkout\",code=~\"5..\"}[5m]))\n    /\n  sum(rate(http_requests_total{service=\"checkout\"}[5m]))\n)\nand on ()\nsum(rate(http_requests_total{service=\"checkout\"}[5m])) > 1\n",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.05
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Checkout fails more than 5% of requests",
+      "runbook_url": "https://runbooks.example.com/checkout/errors"
+    }
+  },
+  {
+    "uid": "gal001-clamp-min",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout error ratio with clamp_min",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(rate(http_requests_total{service=\"checkout\",code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{service=\"checkout\"}[5m])), 1)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.05
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Checkout fails more than 5% of requests",
+      "runbook_url": "https://runbooks.example.com/checkout/errors"
+    }
+  },
+  {
+    "uid": "gal001-guarded-math",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout p99 latency with traffic query",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{service=\"checkout\"}[5m])))",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(rate(http_request_duration_seconds_count{service=\"checkout\"}[5m]))",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "math",
+          "expression": "$A > 0.5 && $B > 1",
+          "refId": "C"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "page",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "Checkout p99 latency is above 500ms",
+      "runbook_url": "https://runbooks.example.com/checkout/latency"
+    }
+  },
+  {
+    "uid": "gal001-gauge-ratio",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "checkout",
+    "title": "Checkout disk almost full",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "min by (instance) (node_filesystem_avail_bytes{job=\"checkout\"} / node_filesystem_size_bytes{job=\"checkout\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0.1
+                ],
+                "type": "lt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "15m",
+    "labels": {
+      "severity": "ticket",
+      "team": "checkout"
+    },
+    "annotations": {
+      "summary": "A checkout node has less than 10% disk left",
+      "runbook_url": "https://runbooks.example.com/checkout/disk"
+    }
+  }
+]

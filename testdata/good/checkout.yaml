@@ -1,0 +1,129 @@
+# Grafana file provisioning. Lints clean.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: checkout
+    folder: Services
+    interval: 1m
+    rules:
+      # Multiwindow, multi-burn-rate SLO alert for a 99.9% availability target
+      # (error budget 0.001), with a traffic guard so a quiet hour cannot page.
+      # The query filters, so no data is the healthy state: noDataState OK.
+      - uid: checkout-slo-burn
+        title: Checkout availability SLO burn
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 21600, to: 0}
+            datasourceUid: prometheus
+            model:
+              datasource: {type: prometheus, uid: prometheus}
+              editorMode: code
+              expr: |
+                (
+                  (
+                    sum(rate(http_requests_total{service="checkout",code=~"5.."}[1h]))
+                      / sum(rate(http_requests_total{service="checkout"}[1h])) > (14.4 * 0.001)
+                  and
+                    sum(rate(http_requests_total{service="checkout",code=~"5.."}[5m]))
+                      / sum(rate(http_requests_total{service="checkout"}[5m])) > (14.4 * 0.001)
+                  )
+                or
+                  (
+                    sum(rate(http_requests_total{service="checkout",code=~"5.."}[6h]))
+                      / sum(rate(http_requests_total{service="checkout"}[6h])) > (6 * 0.001)
+                  and
+                    sum(rate(http_requests_total{service="checkout",code=~"5.."}[30m]))
+                      / sum(rate(http_requests_total{service="checkout"}[30m])) > (6 * 0.001)
+                  )
+                )
+                and
+                sum(rate(http_requests_total{service="checkout"}[5m])) > 1
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          severity: page
+          team: checkout
+        annotations:
+          summary: Checkout is burning its 30-day error budget too fast
+          description: The 5xx ratio is above the burn-rate threshold in both a long and a short window.
+          runbook_url: https://runbooks.example.com/checkout/slo-burn
+      # p99 latency, guarded by a request-rate query in the condition.
+      - uid: checkout-p99-latency
+        title: Checkout p99 latency high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_request_duration_seconds_count{service="checkout"}[5m]))
+              instant: true
+              range: false
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: $A > 0.5 && $B > 1
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: ticket
+          team: checkout
+        annotations:
+          summary: Checkout p99 latency has been above 500ms for 10 minutes
+          runbook_url: https://runbooks.example.com/checkout/latency
+      # Dead man's switch: absent() returns nothing while the target is up.
+      - uid: checkout-target-missing
+        title: Checkout target missing
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: absent(up{job="checkout"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: page
+          team: checkout
+        annotations:
+          summary: Prometheus has no checkout target to scrape
+          runbook_url: https://runbooks.example.com/checkout/target-missing

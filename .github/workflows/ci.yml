@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - run: go vet ./...
+      - run: go test -race ./...
+
+      - uses: golangci/golangci-lint-action@v9.3.0
+        with:
+          version: v2.15.0
+
+      - name: Self-check on testdata
+        run: |
+          go build -o "$RUNNER_TEMP/grafana-alert-lint" ./cmd/grafana-alert-lint
+          "$RUNNER_TEMP/grafana-alert-lint" testdata/good
+          code=0
+          "$RUNNER_TEMP/grafana-alert-lint" testdata/bad || code=$?
+          if [ "$code" -ne 1 ]; then
+            echo "testdata/bad: want exit 1, got $code"
+            exit 1
+          fi
+
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./
+        with:
+          path: testdata/good
+          args: --require-label team

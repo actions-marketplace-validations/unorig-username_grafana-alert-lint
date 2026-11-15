@@ -1,0 +1,147 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: api
+    folder: Services
+    interval: 1m
+    rules:
+      # Fires: Alerting pages when the scrape breaks.
+      - uid: gal002-alerting
+        title: API instance down
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: min by (instance) (up{job="api"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [1], type: lt}
+              refId: B
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: api}
+        annotations:
+          summary: An API instance is not being scraped
+          runbook_url: https://runbooks.example.com/api/down
+      # Fires: OK on a query that always returns series while healthy.
+      - uid: gal002-ok
+        title: API queue backlog
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(job_queue_depth{service="api"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [1000], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: The API job queue holds more than 1000 jobs
+          runbook_url: https://runbooks.example.com/api/queue
+      # Quiet: the query filters, so no data is the healthy state.
+      - uid: gal002-ok-filter
+        title: API queue backlog filtered
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(job_queue_depth{service="api"}) > 1000
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: The API job queue holds more than 1000 jobs
+          runbook_url: https://runbooks.example.com/api/queue
+      # Quiet: absent() returns nothing while the target is up.
+      - uid: gal002-ok-absent
+        title: API target missing
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: absent(up{job="api"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: api}
+        annotations:
+          summary: Prometheus has no API target
+          runbook_url: https://runbooks.example.com/api/down
+      # Quiet: KeepLast.
+      - uid: gal002-keeplast
+        title: API memory high
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: max by (pod) (container_memory_working_set_bytes{container="api"} / container_spec_memory_limit_bytes{container="api"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.9], type: gt}
+              refId: B
+        noDataState: KeepLast
+        execErrState: KeepLast
+        for: 15m
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: An API pod uses more than 90% of its memory limit
+          runbook_url: https://runbooks.example.com/api/memory

@@ -1,0 +1,51 @@
+name: grafana-alert-lint
+description: Lint Grafana-managed alert rules in provisioning YAML, API JSON and Terraform.
+author: Corey Jones
+branding:
+  icon: bell
+  color: orange
+
+inputs:
+  path:
+    description: Files or directories to lint, separated by spaces.
+    required: false
+    default: "."
+  format:
+    description: "Output format: github (annotations on the diff), text, json or sarif."
+    required: false
+    default: github
+  fail-on:
+    description: "Fail the step on findings at or above this severity: error, warning or info."
+    required: false
+    default: warning
+  args:
+    description: "Extra flags, for example: --require-label team --disable GAL009"
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # Builds the linter from the checked-out action, so the binary always
+    # matches the action version. This sets the job's Go version to the one
+    # in this repo's go.mod.
+    - uses: actions/setup-go@v7.0.0
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache-dependency-path: ${{ github.action_path }}/go.sum
+
+    - name: Install grafana-alert-lint
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: go install ./cmd/grafana-alert-lint
+
+    - name: Lint alert rules
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_ARGS: ${{ inputs.args }}
+      run: |
+        # shellcheck disable=SC2086 # path and args are space-separated lists
+        "$(go env GOPATH)/bin/grafana-alert-lint" --format "$INPUT_FORMAT" --fail-on "$INPUT_FAIL_ON" $INPUT_ARGS $INPUT_PATH

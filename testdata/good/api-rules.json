@@ -1,0 +1,106 @@
+[
+  {
+    "uid": "api-5xx-ratio",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "api",
+    "title": "API 5xx ratio high",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "queryType": "",
+        "relativeTimeRange": { "from": 600, "to": 0 },
+        "datasourceUid": "prometheus",
+        "model": {
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{service=\"api\",code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{service=\"api\"}[5m])), 1)",
+          "instant": true,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "queryType": "",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "datasourceUid": "__expr__",
+        "model": {
+          "datasource": { "type": "__expr__", "uid": "__expr__" },
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "type": "reduce"
+        }
+      },
+      {
+        "refId": "C",
+        "queryType": "",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [{ "evaluator": { "params": [0.05], "type": "gt" } }],
+          "datasource": { "type": "__expr__", "uid": "__expr__" },
+          "expression": "B",
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "annotations": {
+      "summary": "More than 5% of API requests fail",
+      "runbook_url": "https://runbooks.example.com/api/errors"
+    },
+    "labels": { "severity": "page", "team": "api" },
+    "isPaused": false,
+    "notification_settings": { "receiver": "api-oncall" }
+  },
+  {
+    "uid": "api-pod-memory",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "api",
+    "title": "API pod near memory limit",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "queryType": "",
+        "relativeTimeRange": { "from": 600, "to": 0 },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "max by (pod) (container_memory_working_set_bytes{container=\"api\"} / container_spec_memory_limit_bytes{container=\"api\"})",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "queryType": "",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [{ "evaluator": { "params": [0.9], "type": "gt" } }],
+          "expression": "A",
+          "refId": "B",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "KeepLast",
+    "execErrState": "KeepLast",
+    "for": "15m",
+    "annotations": {
+      "summary": "An API pod uses more than 90% of its memory limit",
+      "runbook_url": "https://runbooks.example.com/api/memory"
+    },
+    "labels": { "severity": "ticket", "team": "api" },
+    "isPaused": false
+  }
+]

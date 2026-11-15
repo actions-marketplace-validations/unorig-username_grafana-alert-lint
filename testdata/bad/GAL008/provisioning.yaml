@@ -1,0 +1,123 @@
+# Lint with --require-label team --require-label severity.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: api
+    folder: Services
+    interval: 1m
+    rules:
+      # Fires (with --require-label team): no team label.
+      - uid: gal008-no-team
+        title: API certificate expiring
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: min(probe_ssl_earliest_cert_expiry{job="api"} - time())
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [604800], type: lt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 1h
+        labels: {severity: ticket}
+        annotations:
+          summary: The API TLS certificate expires within 7 days
+          runbook_url: https://runbooks.example.com/api/tls
+      # Fires twice (with --require-label team --require-label severity): no labels.
+      - uid: gal008-no-labels
+        title: API certificate expiring unlabeled
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: min(probe_ssl_earliest_cert_expiry{job="api"} - time())
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [604800], type: lt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 1h
+        annotations:
+          summary: The API TLS certificate expires within 7 days
+          runbook_url: https://runbooks.example.com/api/tls
+      # Fires always: notification_settings with an empty receiver.
+      - uid: gal008-empty-receiver
+        title: API certificate expiring direct
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: min(probe_ssl_earliest_cert_expiry{job="api"} - time())
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [604800], type: lt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 1h
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: The API TLS certificate expires within 7 days
+          runbook_url: https://runbooks.example.com/api/tls
+        notification_settings:
+          receiver: ""
+      # Quiet: labels present and a receiver set.
+      - uid: gal008-ok
+        title: API certificate expiring routed
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: min(probe_ssl_earliest_cert_expiry{job="api"} - time())
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [604800], type: lt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 1h
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: The API TLS certificate expires within 7 days
+          runbook_url: https://runbooks.example.com/api/tls
+        notification_settings:
+          receiver: api-oncall

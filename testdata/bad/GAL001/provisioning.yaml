@@ -1,0 +1,219 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: checkout
+    folder: Services
+    interval: 1m
+    rules:
+      # Fires: a plain error ratio with no traffic guard.
+      - uid: gal001-ratio
+        title: Checkout error ratio
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_requests_total{service="checkout",code=~"5.."}[5m])) / sum(rate(http_requests_total{service="checkout"}[5m]))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.05], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout fails more than 5% of requests
+          runbook_url: https://runbooks.example.com/checkout/errors
+      # Fires: p99 latency with no traffic guard.
+      - uid: gal001-quantile
+        title: Checkout p99 latency
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.5], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout p99 latency is above 500ms
+          runbook_url: https://runbooks.example.com/checkout/latency
+      # Fires: the other side of "and" is another ratio, not a traffic guard.
+      - uid: gal001-two-windows
+        title: Checkout error budget burn
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 3600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(rate(http_requests_total{service="checkout",code=~"5.."}[1h])) / sum(rate(http_requests_total{service="checkout"}[1h])) > 0.0144
+                and
+                sum(rate(http_requests_total{service="checkout",code=~"5.."}[5m])) / sum(rate(http_requests_total{service="checkout"}[5m])) > 0.0144
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout is burning its error budget 14.4 times too fast
+          runbook_url: https://runbooks.example.com/checkout/slo
+      # Quiet: guarded in PromQL with "and" on request rate.
+      - uid: gal001-guarded-and
+        title: Checkout error ratio with guard
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: |
+                (
+                  sum(rate(http_requests_total{service="checkout",code=~"5.."}[5m]))
+                    /
+                  sum(rate(http_requests_total{service="checkout"}[5m]))
+                )
+                and on ()
+                sum(rate(http_requests_total{service="checkout"}[5m])) > 1
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.05], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout fails more than 5% of requests
+          runbook_url: https://runbooks.example.com/checkout/errors
+      # Quiet: clamp_min on the denominator.
+      - uid: gal001-clamp-min
+        title: Checkout error ratio with clamp_min
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_requests_total{service="checkout",code=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total{service="checkout"}[5m])), 1)
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.05], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout fails more than 5% of requests
+          runbook_url: https://runbooks.example.com/checkout/errors
+      # Quiet: the condition combines the ratio with a request-rate query.
+      - uid: gal001-guarded-math
+        title: Checkout p99 latency with traffic query
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_request_duration_seconds_count{service="checkout"}[5m]))
+              instant: true
+              range: false
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: $A > 0.5 && $B > 1
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout p99 latency is above 500ms
+          runbook_url: https://runbooks.example.com/checkout/latency
+      # Quiet: a ratio of gauges is not a ratio of rates.
+      - uid: gal001-gauge-ratio
+        title: Checkout disk almost full
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: min by (instance) (node_filesystem_avail_bytes{job="checkout"} / node_filesystem_size_bytes{job="checkout"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.1], type: lt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 15m
+        labels: {severity: ticket, team: checkout}
+        annotations:
+          summary: A checkout node has less than 10% disk left
+          runbook_url: https://runbooks.example.com/checkout/disk

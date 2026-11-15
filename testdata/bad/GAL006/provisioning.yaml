@@ -1,0 +1,115 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: checkout
+    folder: Services
+    interval: 1m
+    rules:
+      # Fires three times: each aggregation drops le.
+      - uid: gal006-drops-le
+        title: Checkout latency by service
+        condition: E
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum by (service) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum without (le, instance) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: B
+          - refId: C
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: C
+          - refId: D
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_request_duration_seconds_count{service="checkout"}[5m]))
+              instant: true
+              range: false
+              refId: D
+          - refId: E
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: ($A > 0.5 || $B > 0.5 || $C > 0.5) && $D > 1
+              refId: E
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout p99 latency is above 500ms
+          runbook_url: https://runbooks.example.com/checkout/latency
+      # Quiet: le kept, no aggregation, or a native histogram.
+      - uid: gal006-ok
+        title: Checkout latency keeps le
+        condition: F
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum by (le, service) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum without (instance, pod) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: B
+          - refId: C
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service="checkout"}[5m]))
+              instant: true
+              range: false
+              refId: C
+          - refId: D
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum by (service) (rate(http_request_duration_seconds{service="checkout"}[5m])))
+              instant: true
+              range: false
+              refId: D
+          - refId: E
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_request_duration_seconds_count{service="checkout"}[5m]))
+              instant: true
+              range: false
+              refId: E
+          - refId: F
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: ($A > 0.5 || $B > 0.5 || $C > 0.5 || $D > 0.5) && $E > 1
+              refId: F
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout p99 latency is above 500ms
+          runbook_url: https://runbooks.example.com/checkout/latency

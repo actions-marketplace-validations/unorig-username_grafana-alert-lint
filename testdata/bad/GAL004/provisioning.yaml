@@ -1,0 +1,118 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: checkout
+    folder: Services
+    interval: 1m
+    rules:
+      # Fires: for is not set.
+      - uid: gal004-unset
+        title: Checkout cart service saturated
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: avg(worker_busy_ratio{service="cart"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.9], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Cart workers are more than 90% busy
+          runbook_url: https://runbooks.example.com/checkout/cart
+      # Fires: for is 0s.
+      - uid: gal004-zero
+        title: Checkout cart service saturated now
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: avg(worker_busy_ratio{service="cart"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.9], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 0s
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Cart workers are more than 90% busy
+          runbook_url: https://runbooks.example.com/checkout/cart
+      # Fires: for is an empty string.
+      - uid: gal004-empty
+        title: Checkout cart service saturated empty
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: avg(worker_busy_ratio{service="cart"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.9], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: ""
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Cart workers are more than 90% busy
+          runbook_url: https://runbooks.example.com/checkout/cart
+      # Quiet: 1m30s.
+      - uid: gal004-set
+        title: Checkout cart service saturated with pending period
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: avg(worker_busy_ratio{service="cart"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.9], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 1m30s
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Cart workers are more than 90% busy
+          runbook_url: https://runbooks.example.com/checkout/cart

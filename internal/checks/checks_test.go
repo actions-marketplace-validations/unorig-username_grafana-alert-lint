@@ -1,0 +1,208 @@
+package checks
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/unorig-username/grafana-alert-lint/internal/rule"
+)
+
+const testdata = "../../testdata/"
+
+var cfg = Config{ScrapeInterval: time.Minute, RequireLabels: []string{"team", "severity"}}
+
+func lintFile(t *testing.T, c Config, path string) []Finding {
+	t.Helper()
+	rules, err := rule.LoadFile(path)
+	if err != nil {
+		t.Fatalf("LoadFile(%s): %v", path, err)
+	}
+	if len(rules) == 0 {
+		t.Fatalf("%s: no rules loaded", path)
+	}
+	return Run(c, rules)
+}
+
+// Each check has one fixture per input format. The fixtures hold rules that
+// must fire and rules that must stay quiet; every other check stays quiet.
+func TestFixtures(t *testing.T) {
+	tests := []struct {
+		id             string
+		yaml, json, tf []int
+	}{
+		{"GAL001", []int{17, 45, 73}, []int{18, 72, 126}, []int{31, 79, 127}},
+		{"GAL002", []int{29, 57}, []int{44, 98}, []int{11, 59}},
+		{"GAL003", []int{30, 58, 65}, []int{45, 99, 110}, []int{12, 60, 103}},
+		{"GAL004", []int{9, 58, 86}, []int{2, 99, 153}, []int{7, 60, 108}},
+		{"GAL005", []int{17, 25, 33}, []int{18, 32, 46}, []int{31, 46, 61}},
+		{"GAL006", []int{17, 25, 33}, []int{18, 32, 46}, []int{31, 46, 61}},
+		{"GAL007", []int{9, 9, 59, 86}, []int{2, 2, 101, 154}, []int{7, 7, 62, 109}},
+		{"GAL008", []int{33, 38, 38, 93}, []int{47, 55, 55, 158}, []int{14, 54, 54, 113}},
+		{"GAL009", []int{13, 48}, []int{10, 74}, []int{23, 86}},
+		{"GAL010", []int{17, 39, 65}, []int{18, 62, 110}, []int{31, 58, 103}},
+	}
+	for _, tt := range tests {
+		for file, want := range map[string][]int{"provisioning.yaml": tt.yaml, "api.json": tt.json, "terraform.tf": tt.tf} {
+			t.Run(tt.id+"/"+file, func(t *testing.T) {
+				var lines []int
+				for _, f := range lintFile(t, cfg, testdata+"bad/"+tt.id+"/"+file) {
+					if f.ID != tt.id {
+						t.Errorf("unexpected %s at line %d: %s", f.ID, f.Line, f.Message)
+					}
+					lines = append(lines, f.Line)
+				}
+				if !slices.Equal(lines, want) {
+					t.Errorf("lines = %v, want %v", lines, want)
+				}
+			})
+		}
+	}
+}
+
+func TestCleanFixtures(t *testing.T) {
+	for _, path := range []string{"good/checkout.yaml", "good/api-rules.json", "good/payments.tf", "terraform/unknown.tf", "yaml/anchors.yaml"} {
+		for _, f := range lintFile(t, cfg, testdata+path) {
+			t.Errorf("%s:%d: %s %s", path, f.Line, f.ID, f.Message)
+		}
+	}
+}
+
+func TestConfig(t *testing.T) {
+	path := testdata + "bad/GAL005/provisioning.yaml"
+	fast := cfg
+	fast.ScrapeInterval = 15 * time.Second
+	// At 15s, [1m] and [2m] hold 4 or more scrapes; the subquery is judged by its step.
+	if got := lintFile(t, fast, path); len(got) != 1 || got[0].Line != 33 {
+		t.Errorf("15s scrape interval: %+v", got)
+	}
+	off := cfg
+	off.Disabled = map[string]bool{"GAL005": true}
+	if got := lintFile(t, off, path); len(got) != 0 {
+		t.Errorf("GAL005 disabled: %+v", got)
+	}
+	noLabels := cfg
+	noLabels.RequireLabels = nil
+	if got := lintFile(t, noLabels, testdata+"bad/GAL008/provisioning.yaml"); len(got) != 1 || !strings.Contains(got[0].Message, "empty receiver") {
+		t.Errorf("without --require-label only the empty receiver fires: %+v", got)
+	}
+}
+
+// ruleYAML builds a rule that is clean apart from what data and the
+// condition bring in.
+func ruleYAML(cond string, data ...string) string {
+	return "title: t\nuid: u\ncondition: " + cond + "\nnoDataState: NoData\nexecErrState: Error\nfor: 5m\n" +
+		"labels: {severity: page, team: api}\nannotations: {summary: s, runbook_url: https://example.com}\ndata:\n" +
+		strings.Join(data, "")
+}
+
+func prom(ref, expr string) string {
+	return fmt.Sprintf("  - {refId: %s, datasourceUid: prometheus, model: {expr: %q, instant: true}}\n", ref, expr)
+}
+
+func expr(ref, typ, e string) string {
+	return fmt.Sprintf("  - {refId: %s, datasourceUid: __expr__, model: {type: %s, expression: %q, reducer: last}}\n", ref, typ, e)
+}
+
+const (
+	ratio   = `sum(rate(http_requests_total{code=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))`
+	traffic = `sum(rate(http_requests_total[5m]))`
+)
+
+func TestCases(t *testing.T) {
+	tests := []struct {
+		name string
+		src  string
+		want []string
+	}{
+		{"unless guard", ruleYAML("B", prom("A", ratio+" unless "+traffic+" < 1"), expr("B", "threshold", "A")), nil},
+		{"recording rule guard", ruleYAML("B", prom("A", ratio+" and job:http_requests:rate5m > 1"), expr("B", "threshold", "A")), nil},
+		{"guard against a number only", ruleYAML("B", prom("A", ratio+" and "+traffic+" > sum(rate(http_requests_total[1h]))"), expr("B", "threshold", "A")), []string{"GAL001"}},
+		{"guard with arithmetic number", ruleYAML("B", prom("A", ratio+" and "+traffic+" > (10 / 60)"), expr("B", "threshold", "A")), nil},
+		{"guard through reduce chain", ruleYAML("E", prom("A", ratio), prom("B", traffic), expr("C", "reduce", "A"), expr("D", "reduce", "$B"), expr("E", "math", "$C > 0.05 && $D > 1")), nil},
+		{"guard through classic conditions", "title: t\ncondition: C\nnoDataState: NoData\nexecErrState: Error\nfor: 5m\nannotations: {summary: s, runbook_url: u}\nlabels: {team: a, severity: b}\ndata:\n" +
+			prom("A", ratio) + prom("B", traffic) +
+			"  - {refId: C, datasourceUid: __expr__, model: {type: classic_conditions, conditions: [{query: {params: [A]}, reducer: {type: avg}}, {query: {params: [B]}, reducer: {type: avg}}]}}\n", nil},
+		{"traffic query not in condition", ruleYAML("C", prom("A", ratio), prom("B", traffic), expr("C", "threshold", "A")), []string{"GAL001"}},
+		{"other query is a ratio too", ruleYAML("C", prom("A", ratio), prom("B", ratio), expr("C", "math", "$A > 0.01 && $B > 0.01")), []string{"GAL001", "GAL001"}},
+		{"condition does not read the ratio", ruleYAML("C", prom("A", ratio), prom("B", traffic), expr("C", "threshold", "B")), nil},
+		{"condition chain unresolvable", ruleYAML("C", prom("A", ratio), prom("B", traffic), expr("C", "sql", "SELECT 1")), nil},
+		{"condition cycle", ruleYAML("C", prom("A", ratio), prom("B", traffic), expr("C", "math", "$D"), expr("D", "math", "$C")), nil},
+		{"condition unknown refId", ruleYAML("C", prom("A", ratio), prom("B", traffic), expr("C", "math", "$Z")), nil},
+		{"irate and idelta windows", ruleYAML("B", prom("A", `sum(irate(x_total[1m])) + sum(idelta(y[90s]))`), expr("B", "threshold", "A")), []string{"GAL005", "GAL005"}},
+		{"grafana macros parse", ruleYAML("B", prom("A", `sum(increase(x_total[$__range])) / ${__range_s} + sum(rate(y_total[${__interval}])) * $__interval_ms`), expr("B", "threshold", "A")), nil},
+		{"empty expr", ruleYAML("B", prom("A", ""), expr("B", "threshold", "A")), []string{"GAL010"}},
+		{"topk keeps le", ruleYAML("B", prom("A", `histogram_quantile(0.9, topk(5, rate(x_bucket[5m]))) and sum(rate(x_count[5m])) > 1`), expr("B", "threshold", "A")), nil},
+		{"__name__ bucket matcher", ruleYAML("B", prom("A", `histogram_quantile(0.9, max by (job) (rate({__name__="x_bucket"}[5m]))) and sum(rate(x_count[5m])) > 1`), expr("B", "threshold", "A")), []string{"GAL006"}},
+		{"no data entries", "title: t\ncondition: A\nnoDataState: NoData\nexecErrState: Error\nfor: 5m\nannotations: {summary: s, runbook_url: u}\nlabels: {team: a, severity: b}\ndata: []\n", []string{"GAL010"}},
+		{"policy instead of receiver", ruleYAML("A", prom("A", "up")) + "notification_settings: {policy: api}\n", nil},
+		{"noDataState OK with Loki", strings.Replace(ruleYAML("A", "  - {refId: A, datasourceUid: loki, model: {expr: 'count_over_time({app=\"api\"}[5m])', datasource: {type: loki}}}\n"), "noDataState: NoData", "noDataState: OK", 1), nil},
+		{"noDataState lower case", strings.Replace(ruleYAML("A", prom("A", "up")), "noDataState: NoData", "noDataState: alerting", 1), []string{"GAL002"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := filepath.Join(t.TempDir(), "rule.yaml")
+			if err := os.WriteFile(p, []byte(tt.src), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			var ids []string
+			for _, f := range lintFile(t, cfg, p) {
+				ids = append(ids, f.ID)
+			}
+			if !slices.Equal(ids, tt.want) {
+				t.Errorf("got %v, want %v", ids, tt.want)
+			}
+		})
+	}
+}
+
+func TestPendingPeriodValues(t *testing.T) {
+	for _, tt := range []struct {
+		value string
+		zero  bool
+	}{
+		{"", true}, {"0", true}, {"0s", true}, {"0m", true}, {"0h0m", true}, {"0.0", true},
+		{"5m", false}, {"1m30s", false}, {"300000000000", false}, {"later", false},
+	} {
+		if got := isZeroDuration(tt.value); got != tt.zero {
+			t.Errorf("isZeroDuration(%q) = %v, want %v", tt.value, got, tt.zero)
+		}
+	}
+}
+
+func TestRuleName(t *testing.T) {
+	r := rule.Rule{File: "f", Line: 3, UID: "uid-1"}
+	got := Run(Config{}, []rule.Rule{r})
+	if len(got) == 0 || got[0].Rule != "uid-1" || got[0].Line != 3 {
+		t.Errorf("rule without title: %+v", got)
+	}
+	got = Run(Config{}, []rule.Rule{{File: "f", Line: 3}})
+	if len(got) == 0 || got[0].Rule != "untitled" {
+		t.Errorf("rule without title or uid: %+v", got)
+	}
+}
+
+func TestSeverity(t *testing.T) {
+	for _, s := range []Severity{Info, Warning, Error} {
+		got, ok := ParseSeverity(s.String())
+		b, _ := s.MarshalText()
+		if !ok || got != s || string(b) != s.String() {
+			t.Errorf("round trip of %v failed", s)
+		}
+	}
+	if _, ok := ParseSeverity("fatal"); ok {
+		t.Error(`ParseSeverity("fatal") should fail`)
+	}
+}
+
+func TestChecksTable(t *testing.T) {
+	for i, c := range Checks {
+		if want := fmt.Sprintf("GAL%03d", i+1); c.ID != want || c.Name == "" || c.Summary == "" || c.run == nil {
+			t.Errorf("Checks[%d] = %+v, want ID %s with name, summary and run", i, c, want)
+		}
+	}
+}

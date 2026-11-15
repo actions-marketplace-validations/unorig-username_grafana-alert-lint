@@ -1,0 +1,39 @@
+# Shared defaults through YAML anchors and merge keys. Values that come from
+# a merge or an alias are treated as unknown, so nothing here is reported.
+x-defaults: &defaults
+  noDataState: NoData
+  execErrState: Error
+  for: 5m
+  labels: {severity: page, team: api}
+x-annotations: &annotations
+  summary: The API is down
+  runbook_url: https://runbooks.example.com/api/down
+x-queries: &queries
+  - refId: A
+    datasourceUid: prometheus
+    model: {expr: 'min(up{job="api"})', instant: true}
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: api
+    folder: Services
+    interval: 1m
+    rules:
+      - <<: *defaults
+        uid: api-down-merged
+        title: API down merged
+        condition: A
+        annotations: *annotations
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            model: {expr: 'min(up{job="api"})', instant: true}
+      - uid: api-down-aliased
+        title: API down aliased
+        condition: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: api}
+        annotations: *annotations
+        data: *queries

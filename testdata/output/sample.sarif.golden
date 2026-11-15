@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "GAL001",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "Checkout: 5xx ratio, all regions: ratio of rates with no traffic guard: at low traffic one failed request is a 100% error rate. Add `and sum(rate(...)) > N`, clamp_min the denominator, or combine a request-rate query in the condition."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "testdata/output/sample.yaml"
+                },
+                "region": {
+                  "startLine": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GAL003",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Checkout: 5xx ratio, all regions: execErrState is Alerting: a datasource timeout or query error pages as an outage. Use Error or KeepLast."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "testdata/output/sample.yaml"
+                },
+                "region": {
+                  "startLine": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GAL007",
+          "ruleIndex": 6,
+          "level": "note",
+          "message": {
+            "text": "Checkout: 5xx ratio, all regions: no runbook_url annotation: the responder has to find the runbook while paged. Link one."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "testdata/output/sample.yaml"
+                },
+                "region": {
+                  "startLine": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GAL006",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "Checkout p99 latency: histogram_quantile over sum by (service) drops the le label: Prometheus skips bucket series without le, so the query returns nothing and the alert never fires. Keep le in the grouping."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "testdata/output/sample.yaml"
+                },
+                "region": {
+                  "startLine": 43
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GAL008",
+          "ruleIndex": 7,
+          "level": "error",
+          "message": {
+            "text": "Checkout p99 latency: missing required label \"team\": notification policies route on it, so this alert falls through to the default policy."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "testdata/output/sample.yaml"
+                },
+                "region": {
+                  "startLine": 61
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "informationUri": "https://github.com/unorig-username/grafana-alert-lint",
+          "name": "grafana-alert-lint",
+          "rules": [
+            {
+              "id": "GAL001",
+              "name": "traffic-guard",
+              "shortDescription": {
+                "text": "Ratio or histogram_quantile alert without a traffic guard"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal001-traffic-guard",
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "GAL002",
+              "name": "no-data-state",
+              "shortDescription": {
+                "text": "noDataState is Alerting or OK"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal002-no-data-state",
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "GAL003",
+              "name": "exec-error-state",
+              "shortDescription": {
+                "text": "execErrState is Alerting, OK or unset (defaults to Alerting)"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal003-exec-error-state",
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "GAL004",
+              "name": "pending-period",
+              "shortDescription": {
+                "text": "No pending period (for missing or zero)"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal004-pending-period",
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "GAL005",
+              "name": "rate-window",
+              "shortDescription": {
+                "text": "rate-family window shorter than 4 scrape intervals"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal005-rate-window",
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "GAL006",
+              "name": "histogram-quantile-le",
+              "shortDescription": {
+                "text": "histogram_quantile over an aggregation that drops le"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal006-histogram-quantile-le",
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "GAL007",
+              "name": "annotations",
+              "shortDescription": {
+                "text": "Missing summary or runbook_url annotation"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal007-annotations",
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "GAL008",
+              "name": "required-labels",
+              "shortDescription": {
+                "text": "Missing routing labels or empty notification receiver"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal008-required-labels",
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "GAL009",
+              "name": "range-query",
+              "shortDescription": {
+                "text": "Range query reduced with last; an instant query is cheaper"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal009-range-query",
+              "defaultConfiguration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "GAL010",
+              "name": "parse-error",
+              "shortDescription": {
+                "text": "PromQL does not parse or condition matches no data entry"
+              },
+              "helpUri": "https://github.com/unorig-username/grafana-alert-lint#gal010-parse-error",
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ],
+          "version": "0.1.0-test"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

@@ -1,0 +1,123 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: api
+    folder: Services
+    interval: 1m
+    rules:
+      # Fires: unbalanced parenthesis.
+      - uid: gal010-syntax
+        title: API worker restarts
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 900, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(increase(kube_pod_container_status_restarts_total{container="api"}[15m])
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [3], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: API containers restarted more than 3 times in 15 minutes
+          runbook_url: https://runbooks.example.com/api/restarts
+      # Fires: condition C does not exist.
+      - uid: gal010-condition
+        title: API worker restarts bad condition
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 900, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(increase(kube_pod_container_status_restarts_total{container="api"}[15m]))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [3], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: API containers restarted more than 3 times in 15 minutes
+          runbook_url: https://runbooks.example.com/api/restarts
+      # Fires: no condition.
+      - uid: gal010-no-condition
+        title: API worker restarts no condition
+        data:
+          - refId: A
+            relativeTimeRange: {from: 900, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(increase(kube_pod_container_status_restarts_total{container="api"}[15m]))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [3], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: API containers restarted more than 3 times in 15 minutes
+          runbook_url: https://runbooks.example.com/api/restarts
+      # Quiet: Loki queries are not PromQL.
+      - uid: gal010-loki
+        title: API panics in logs
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              expr: sum(count_over_time({app="api"} |= "panic" [5m]))
+              queryType: instant
+              refId: A
+          - refId: B
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              datasource: {type: loki, uid: loki}
+              expr: sum(rate({app="api"}[1m]))
+              queryType: instant
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: $A > 0 && $B > 1
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: ticket, team: api}
+        annotations:
+          summary: The API logged a panic
+          runbook_url: https://runbooks.example.com/api/panics

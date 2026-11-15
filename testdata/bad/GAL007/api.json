@@ -1,0 +1,213 @@
+[
+  {
+    "uid": "gal007-none",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "payments",
+    "title": "Payments refunds failing",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(increase(refund_failures_total{service=\"payments\"}[10m]))",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "payments"
+    }
+  },
+  {
+    "uid": "gal007-no-runbook",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "payments",
+    "title": "Payments refunds failing no runbook",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(increase(refund_failures_total{service=\"payments\"}[10m]))",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "payments"
+    },
+    "annotations": {
+      "summary": "More than 5 refunds failed in 10 minutes"
+    }
+  },
+  {
+    "uid": "gal007-empty-summary",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "payments",
+    "title": "Payments refunds failing empty summary",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(increase(refund_failures_total{service=\"payments\"}[10m]))",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "payments"
+    },
+    "annotations": {
+      "summary": "",
+      "runbook_url": "https://runbooks.example.com/payments/refunds"
+    }
+  },
+  {
+    "uid": "gal007-ok",
+    "orgID": 1,
+    "folderUID": "services",
+    "ruleGroup": "payments",
+    "title": "Payments refunds failing documented",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "expr": "sum(increase(refund_failures_total{service=\"payments\"}[10m]))",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "A",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  5
+                ],
+                "type": "gt"
+              }
+            }
+          ],
+          "refId": "B"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "labels": {
+      "severity": "ticket",
+      "team": "payments"
+    },
+    "annotations": {
+      "summary": "More than 5 refunds failed in 10 minutes",
+      "runbook_url": "https://runbooks.example.com/payments/refunds"
+    }
+  }
+]

@@ -1,0 +1,118 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: payments
+    folder: Services
+    interval: 1m
+    rules:
+      # Fires: Alerting pages on a datasource blip.
+      - uid: gal003-alerting
+        title: Payments queue backlog
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(job_queue_depth{service="payments"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [500], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Alerting
+        for: 10m
+        labels: {severity: page, team: payments}
+        annotations:
+          summary: The payments queue holds more than 500 jobs
+          runbook_url: https://runbooks.example.com/payments/queue
+      # Fires: OK hides query errors.
+      - uid: gal003-ok
+        title: Payments worker saturation
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: avg(worker_busy_ratio{service="payments"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.9], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: OK
+        for: 10m
+        labels: {severity: ticket, team: payments}
+        annotations:
+          summary: Payments workers are more than 90% busy
+          runbook_url: https://runbooks.example.com/payments/workers
+      # Fires: not set, so it defaults to Alerting.
+      - uid: gal003-unset
+        title: Payments settlement lag
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: max(time() - settlement_last_success_timestamp_seconds{service="payments"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [3600], type: gt}
+              refId: B
+        noDataState: NoData
+        for: 5m
+        labels: {severity: page, team: payments}
+        annotations:
+          summary: No settlement batch has succeeded for an hour
+          runbook_url: https://runbooks.example.com/payments/settlement
+      # Quiet: Error.
+      - uid: gal003-error
+        title: Payments settlement lag error state
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: max(time() - settlement_last_success_timestamp_seconds{service="payments"})
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [3600], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels: {severity: page, team: payments}
+        annotations:
+          summary: No settlement batch has succeeded for an hour
+          runbook_url: https://runbooks.example.com/payments/settlement

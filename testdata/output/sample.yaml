@@ -1,0 +1,64 @@
+# Input for the output-format golden tests: one error, warnings and an info.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: checkout
+    folder: Services
+    interval: 1m
+    rules:
+      - uid: checkout-5xx
+        title: "Checkout: 5xx ratio, all regions"
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_requests_total{service="checkout",code=~"5.."}[5m])) / sum(rate(http_requests_total{service="checkout"}[5m]))
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.05], type: gt}
+              refId: B
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        labels: {severity: page, team: checkout}
+        annotations:
+          summary: Checkout fails more than 5% of requests
+      - uid: checkout-p99
+        title: Checkout p99 latency
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              expr: |
+                histogram_quantile(0.99, sum by (service) (rate(http_request_duration_seconds_bucket{service="checkout"}[5m])))
+                and
+                sum(rate(http_request_duration_seconds_count{service="checkout"}[5m])) > 1
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {params: [0.5], type: gt}
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: Checkout p99 latency is above 500ms
+          runbook_url: https://runbooks.example.com/checkout/latency
