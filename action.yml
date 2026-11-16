@@ -22,31 +22,81 @@ inputs:
     description: "Extra flags, for example: --require-label team --disable GAL009"
     required: false
     default: ""
+  version:
+    description: "Release to download, for example v0.1.1. Defaults to the tag the action is pinned to. Set it when you pin the action to a commit SHA."
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
-    # Builds the linter from the checked-out action, so the binary always
-    # matches the action version. This sets the job's Go version to the one
-    # in this repo's go.mod. No cache: setup-go only hashes files inside
-    # GITHUB_WORKSPACE, and the action's go.sum lives outside it.
+    # Pinned to a release tag (or given `version`): download that release's
+    # binary and check it against the release's checksums.txt. Pinned to a
+    # branch or SHA, or on a platform with no release binary: build from
+    # source instead, which needs setup-go.
+    - name: Install grafana-alert-lint
+      id: install
+      shell: bash
+      env:
+        # action_ref and action_repository only resolve in env, not in run.
+        VERSION: ${{ inputs.version }}
+        ACTION_REF: ${{ github.action_ref }}
+        REPO: ${{ github.action_repository || 'unorig-username/grafana-alert-lint' }}
+      run: |
+        if [[ -z "$VERSION" && "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then VERSION="$ACTION_REF"; fi
+        case "$RUNNER_OS/$RUNNER_ARCH" in
+          Linux/X64) asset=grafana-alert-lint_linux_amd64 ;;
+          Linux/ARM64) asset=grafana-alert-lint_linux_arm64 ;;
+          macOS/X64) asset=grafana-alert-lint_darwin_amd64 ;;
+          macOS/ARM64) asset=grafana-alert-lint_darwin_arm64 ;;
+          Windows/X64) asset=grafana-alert-lint_windows_amd64.exe ;;
+          Windows/ARM64) asset=grafana-alert-lint_windows_arm64.exe ;;
+          *) asset="" ;;
+        esac
+        dir="$RUNNER_TEMP/grafana-alert-lint"
+        bin="$dir/grafana-alert-lint"
+        if [[ "$RUNNER_OS" == Windows ]]; then bin="$bin.exe"; fi
+        mkdir -p "$dir"
+        echo "bin=$bin" >> "$GITHUB_OUTPUT"
+        if [[ -z "$VERSION" || -z "$asset" ]]; then
+          echo "No release to download (ref '$ACTION_REF', $RUNNER_OS/$RUNNER_ARCH): building from source."
+          echo "build=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        echo "Downloading $asset from $REPO $VERSION"
+        url="https://github.com/$REPO/releases/download/$VERSION"
+        curl -fsSL --retry 3 -o "$dir/$asset" "$url/$asset"
+        curl -fsSL --retry 3 -o "$dir/checksums.txt" "$url/checksums.txt"
+        sum=sha256sum
+        if ! command -v sha256sum > /dev/null; then sum="shasum -a 256"; fi
+        (cd "$dir" && awk -v a="$asset" '$2 == a' checksums.txt | $sum -c -)
+        mv "$dir/$asset" "$bin"
+        chmod +x "$bin"
+
+    # No cache: setup-go only hashes files inside GITHUB_WORKSPACE, and the
+    # action's go.sum lives outside it.
     - uses: actions/setup-go@v7.0.0
+      if: steps.install.outputs.build == 'true'
       with:
         go-version-file: ${{ github.action_path }}/go.mod
         cache: false
 
-    - name: Install grafana-alert-lint
+    - name: Build grafana-alert-lint from source
+      if: steps.install.outputs.build == 'true'
       shell: bash
       working-directory: ${{ github.action_path }}
-      run: go install ./cmd/grafana-alert-lint
+      env:
+        BIN: ${{ steps.install.outputs.bin }}
+      run: go build -o "$BIN" ./cmd/grafana-alert-lint
 
     - name: Lint alert rules
       shell: bash
       env:
+        BIN: ${{ steps.install.outputs.bin }}
         INPUT_PATH: ${{ inputs.path }}
         INPUT_FORMAT: ${{ inputs.format }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_ARGS: ${{ inputs.args }}
       run: |
         # shellcheck disable=SC2086 # path and args are space-separated lists
-        "$(go env GOPATH)/bin/grafana-alert-lint" --format "$INPUT_FORMAT" --fail-on "$INPUT_FAIL_ON" $INPUT_ARGS $INPUT_PATH
+        "$BIN" --format "$INPUT_FORMAT" --fail-on "$INPUT_FAIL_ON" $INPUT_ARGS $INPUT_PATH

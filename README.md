@@ -27,7 +27,9 @@ times out. Those settings are where a lot of bad pages come from.
 go install github.com/unorig-username/grafana-alert-lint/cmd/grafana-alert-lint@latest
 ```
 
-Needs Go 1.27.1 or newer.
+Needs Go 1.27.1 or newer. Or download a binary for Linux, macOS or Windows
+from [Releases](https://github.com/unorig-username/grafana-alert-lint/releases);
+each release has a `checksums.txt`.
 
 ## Usage
 
@@ -312,7 +314,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: unorig-username/grafana-alert-lint@v0.1.0
+      - uses: unorig-username/grafana-alert-lint@v0.1.1
         with:
           path: alerting/ terraform/grafana/
           args: --require-label team --require-label severity
@@ -320,10 +322,22 @@ jobs:
 
 Inputs: `path` (space-separated, default `.`), `format` (default `github`,
 which annotates the diff), `fail-on` (default `warning`), and `args` for any
-other flags. The action builds the linter with `actions/setup-go` and
-`go install`, which sets the job's Go version to the one in this repo's
-`go.mod`. If later steps in the job need a different Go, run the linter in
-its own job.
+other flags.
+
+Pinned to a release tag, the action downloads that release's binary and
+checks it against `checksums.txt`, so it takes a few seconds and leaves the
+job's Go alone. If you pin to a commit SHA, also set `version` to the
+matching tag:
+
+```yaml
+      - uses: unorig-username/grafana-alert-lint@<commit-sha> # v0.1.1
+        with:
+          version: v0.1.1
+```
+
+Without a tag or `version` (a branch pin, or a SHA pin with no `version`),
+the action builds from source with `actions/setup-go`, which also sets the
+job's Go version for later steps.
 
 ### Code scanning (SARIF)
 
@@ -339,7 +353,7 @@ jobs:
       - uses: actions/setup-go@v7.0.0
         with:
           go-version: stable
-      - run: go install github.com/unorig-username/grafana-alert-lint/cmd/grafana-alert-lint@v0.1.0
+      - run: go install github.com/unorig-username/grafana-alert-lint/cmd/grafana-alert-lint@v0.1.1
       # Exit 1 means findings; upload them anyway. Exit 2 still fails the step.
       - run: grafana-alert-lint --format sarif alerting/ > alert-lint.sarif || [ $? -eq 1 ]
       - uses: github/codeql-action/upload-sarif@v4.39.3
